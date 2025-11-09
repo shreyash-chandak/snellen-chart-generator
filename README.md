@@ -1,2 +1,5 @@
-# snellen-chart-generator
-a simple snellen chart (for eye tests) generator
+# TODO
+- add jpg format
+- fix double lines appearing
+- reduce preview window size
+- autofill random
