@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snellen Chart Generator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Snellen Chart Generator</h1>
+    <p>Generate a printable Snellen eye chart with your custom letters.</p>
+  </header>
+
+  <main>
+    <section id="input-section">
+      <textarea id="inputRows" rows="11" placeholder="Enter letters for each line (one line per row)..."></textarea>
+      <button id="generateBtn">Generate Chart</button>
+      <button id="printBtn" style="display:none;">🖨 Print Chart</button>
+    </section>
+
+    <section id="chartContainer" class="chart"></section>
+  </main>
+
+  <footer>
+    <p>⚠️ For educational use only. Not for medical diagnosis.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
