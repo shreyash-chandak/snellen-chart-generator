@@ -1,13 +1,12 @@
 // src/components/ChartPreview.tsx
-import { forwardRef, useMemo } from 'react';
+import { forwardRef, useMemo, useEffect, useState } from 'react';
 import { generateRandomLetters } from '../utils/generateLetters';
 
 interface ChartPreviewProps {
-  letters: string; // user-typed letters (A-Z only expected)
+  letters: string;
 }
 
 function hashStringToSeed(s: string): number {
-  // simple hash -> 32-bit int
   let h = 2166136261 >>> 0;
   for (let i = 0; i < s.length; i++) {
     h ^= s.charCodeAt(i);
@@ -16,107 +15,150 @@ function hashStringToSeed(s: string): number {
   return h >>> 0;
 }
 
+const FONT_SIZES = [152, 130, 108, 87, 65, 43, 33, 21, 15, 9];
+const TOTAL_ROWS = FONT_SIZES.length;
+const TOTAL_LETTERS = (TOTAL_ROWS * (TOTAL_ROWS + 1)) / 2; // 55
+
 const ChartPreview = forwardRef<HTMLDivElement, ChartPreviewProps>(({ letters }, ref) => {
   const validInput = (letters || '').replace(/[^A-Z]/g, '');
 
-  // total letters required for 8 rows: 1+2+...+8 = 36
-  const TOTAL_LETTERS = 36;
-  const TOTAL_ROWS = 8;
-
-  // compute the filled 36-letter string deterministically based on validInput
-  const filled36 = useMemo(() => {
-    if (!validInput) return ''; // empty preview if no input
-
+  // Generate deterministic preview letters
+  const filled = useMemo(() => {
+    if (!validInput) return '';
     const needed = Math.max(0, TOTAL_LETTERS - validInput.length);
-
-    if (needed === 0) {
-      return validInput.slice(0, TOTAL_LETTERS);
-    }
-
-    // deterministic seed from input so preview doesn't flicker randomly while typing
     const seed = hashStringToSeed(validInput);
     const suffix = generateRandomLetters(needed, seed);
     return (validInput + suffix).slice(0, TOTAL_LETTERS);
   }, [validInput]);
 
+  // Construct rows
   const rows = useMemo(() => {
-    if (!filled36) return [];
-
+    if (!filled) return [];
     const arr: { fontSize: number; letters: string }[] = [];
     let idx = 0;
-
-    // Exponential interpolation from maxSize -> minSize
-    const maxSize = 100 * 0.95; // px (scaled overall)
-    const minSize = 18 * 0.95;
-
     for (let row = 0; row < TOTAL_ROWS; row++) {
-      const t = row / (TOTAL_ROWS - 1); // 0..1
-      // exponential interpolation: size = max * (min/max)^(t)
-      const ratio = minSize / maxSize;
-      const fontSize = Math.max(10, Math.round(maxSize * Math.pow(ratio, t)));
-
       const count = row + 1;
-      const lettersForRow = filled36.slice(idx, idx + count).split('').join(' ');
+      const fontSize = FONT_SIZES[row];
+      const lettersForRow = filled.slice(idx, idx + count).split('').join(' ');
       idx += count;
-
       arr.push({ fontSize, letters: lettersForRow });
     }
-
     return arr;
-  }, [filled36]);
+  }, [filled]);
+
+  // Handle scaling for preview
+  const [scale, setScale] = useState(0.5); // default zoom-out factor
+
+  useEffect(() => {
+    const updateScale = () => {
+      const container = document.getElementById('preview-container');
+      if (container) {
+        const availableHeight = container.clientHeight;
+        // Adjust scale based on available height
+        setScale(Math.min(availableHeight / 1100, 0.7)); // max zoom 0.6, fits even small screens
+      }
+    };
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, []);
+
+  // --- CSS for print layout ---
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @media print {
+        @page {
+          size: A4 portrait;
+          margin: 0;
+        }
+        body {
+          background: white !important;
+        }
+        #chart-print-container {
+          width: 210mm;
+          height: 297mm;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          background: white;
+        }
+        #chart-content {
+          transform: scale(0.95);
+          transform-origin: center center;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   return (
     <div
+      id="preview-container"
       ref={ref}
-      id="chart-preview"
-      className="flex items-center justify-center p-6"
-      style={{ background: 'transparent' }}
+      className="flex items-center justify-center bg-slate-100"
+      style={{
+        width: '100%',
+        height: '100%',
+        borderRadius: '12px',
+        overflow: 'hidden',
+        boxShadow: '0 0 10px rgba(0,0,0,0.1)',
+      }}
     >
       {validInput.length === 0 ? (
         <div
-          className="bg-white rounded-lg shadow-sm flex items-center justify-center"
+          className="bg-white flex items-center justify-center"
           style={{
             width: 'min(420px, 44vw)',
             height: 'min(560px, 66vh)',
-            transform: 'scale(0.95)',
+            borderRadius: '8px',
           }}
         >
           <p className="text-slate-400">Enter letters to generate your chart</p>
         </div>
       ) : (
         <div
-          className="bg-white rounded-lg shadow-sm flex flex-col items-center justify-center overflow-hidden"
+          id="chart-print-container"
           style={{
-            width: 'min(420px, 44vw)',
-            padding: '18px',
-            transform: 'scale(0.95)',
-            boxSizing: 'border-box',
-            // keep chart area white for printing
+            transform: `scale(${scale})`,
+            transformOrigin: 'center center',
+            transition: 'transform 0.3s ease',
           }}
         >
           <div
+            id="chart-content"
+            className="bg-white flex flex-col items-center justify-center"
             style={{
-              width: '100%',
+              width: '210mm',
+              height: '297mm',
+              padding: '2rem 1rem',
+              border: '1px solid #ddd',
+              borderRadius: '8px',
+              background: '#fff',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: '6px',
+              justifyContent: 'center',
+              gap: '12px',
             }}
           >
             {rows.map((r, i) => (
               <div
                 key={i}
                 style={{
-                  fontFamily: '"DejaVu Sans", Arial, sans-serif',
+                  fontFamily: '"Courier New", Courier, monospace',
+                  fontWeight: 'bold',
                   fontSize: `${r.fontSize}px`,
                   lineHeight: 1,
-                  color: '#111',
-                  letterSpacing: `${Math.max(2, r.fontSize / 18)}px`,
-                  fontWeight: 400,
+                  color: '#000',
+                  letterSpacing: `${Math.max(4, r.fontSize / 8)}px`,
                   whiteSpace: 'nowrap',
                   display: 'block',
+                  textAlign: 'center',
                 }}
-                aria-hidden
               >
                 {r.letters}
               </div>

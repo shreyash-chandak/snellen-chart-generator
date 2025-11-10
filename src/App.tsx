@@ -5,26 +5,24 @@ import ChartPreview from './components/ChartPreview';
 import { downloadChart } from './utils/downloadChart';
 import { generateRandomLetters } from './utils/generateLetters';
 
+const TOTAL_LETTERS = 55;
+
 function App() {
-  const [userInput, setUserInput] = useState<string>(''); // exactly what user types
+  const [userInput, setUserInput] = useState<string>(''); 
   const [fileType, setFileType] = useState<'png' | 'pdf' | 'svg' | 'jpg'>('png');
   const previewRef = useRef<HTMLDivElement>(null);
-
-  // placeholder 5 letters shown at start
   const placeholder5 = useMemo(() => generateRandomLetters(5), []);
 
-  // when user types, keep only A-Z uppercase in the controlled input
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const raw = e.target.value.toUpperCase();
-    const filtered = raw.replace(/[^A-Z]/g, '');
+    const filtered = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
     setUserInput(filtered);
   };
 
   const handleRandomize = () => {
-    const valid = (userInput || '').replace(/[^A-Z]/g, '');
-    const needed = Math.max(0, 36 - valid.length);
+    const valid = userInput.replace(/[^A-Z]/g, '');
+    const needed = Math.max(0, TOTAL_LETTERS - valid.length);
     const fill = generateRandomLetters(needed);
-    setUserInput((valid + fill).slice(0, 36));
+    setUserInput((valid + fill).slice(0, TOTAL_LETTERS));
   };
 
   const handleDownload = async () => {
@@ -57,7 +55,7 @@ function App() {
                 placeholder={placeholder5}
               />
               <p className="mt-2 text-xs text-slate-500">
-                Type up to 36 letters (A–Z). Preview fills the remaining letters automatically.
+                Type up to 55 letters (A–Z). Preview auto-fills remaining letters.
               </p>
             </div>
 
