@@ -1,15 +1,23 @@
-const COMMON_LETTERS = 'CDEFLOPTZ';
-const ALL_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-export const generateRandomLetters = (): string => {
-  const length = Math.floor(Math.random() * 4) + 5;
+// src/utils/generateLetters.ts
+export const generateRandomLetters = (length = 36, seed?: number): string => {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   let result = '';
 
-  for (let i = 0; i < length; i++) {
-    const useCommon = Math.random() > 0.3;
-    const sourceLetters = useCommon ? COMMON_LETTERS : ALL_LETTERS;
-    const randomIndex = Math.floor(Math.random() * sourceLetters.length);
-    result += sourceLetters[randomIndex];
+  // If seed provided, use a simple LCG for deterministic output.
+  // Otherwise use Math.random.
+  if (typeof seed === 'number') {
+    // LCG parameters (32-bit)
+    let s = seed >>> 0;
+    for (let i = 0; i < length; i++) {
+      s = (1664525 * s + 1013904223) >>> 0;
+      const idx = s % alphabet.length;
+      result += alphabet[idx];
+    }
+  } else {
+    for (let i = 0; i < length; i++) {
+      const idx = Math.floor(Math.random() * alphabet.length);
+      result += alphabet[idx];
+    }
   }
 
   return result;
